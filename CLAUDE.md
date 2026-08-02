@@ -102,6 +102,10 @@ standing context; keep the week-specific detail out of it.
 throughput and the rate actually servable at an interactive SLO are very different numbers, and the
 gap is the finding. Sweep harness explicitly deferred to week 2.
 
+**Candidate: [`week2.md`](week2.md)** — not yet planned. Holds the CUDA-toolkit item: this box has
+no toolkit, so FlashInfer's sampler and DeepGEMM's FP8 GEMM are both bypassed, and every FP8 number
+measured so far ran on a Cutlass fallback. Candidate post: "I understated my own hardware."
+
 ## Positioning
 
 Lead with systems artifacts, not the papers. Use the papers as evidence of *rigor* — experiment
