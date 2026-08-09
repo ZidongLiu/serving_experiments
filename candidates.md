@@ -1,8 +1,10 @@
-# Week 2 — CANDIDATE, not yet planned
+# Parked candidates
 
-> Captured mid-week-1 (2026-08-01) while debugging env setup; revised 2026-08-05. Per the cadence
-> rule in `CLAUDE.md`, week 2 gets planned at the *start* of week 2, from what week 1 actually
-> produced. This file is a holding pen for the idea and its design, not a commitment.
+Ideas with design work already done, not committed to any week. Recorded so they aren't
+rediscovered from scratch. Promote one into `weekN/weekN.md` when a week chooses it.
+
+Originally written as `week2.md` (2026-08-01, revised 08-05); week 2 went to the cost-model
+question instead, so this became the holding pen. Nothing here has been run.
 
 ---
 

@@ -11,8 +11,8 @@ look smarter. Every number here is reproducible from the committed data.
 - 1× NVIDIA RTX PRO 6000 Blackwell, 96 GB (sm_120), driver 595.84 / CUDA 13.2
 - 24 cores, 60 GB system RAM
 - Single GPU, so: no tensor parallelism, no multi-node, no disaggregated prefill/decode
-- No CUDA toolkit installed — which silently routes vLLM's FP8 GEMM to a Cutlass fallback. That's
-  week 2's subject.
+- No CUDA toolkit installed — which silently routes vLLM's FP8 GEMM to a Cutlass fallback. Parked
+  as its own experiment in [`candidates.md`](candidates.md); a live confound until then.
 
 ---
 
@@ -84,7 +84,8 @@ week1/
     warmup_bench.txt        the discarded warmup run; calibrates the cost model
     clocks.csv              SM clock / temp / power before and after every run
   results/                  gitignored: raw vLLM output, 49 MB, regenerable
-week2.md                    next week's question, not yet run
+week2/week2.md              next week's question, not yet run
+candidates.md               parked experiment ideas, design already done
 CLAUDE.md                   working agreement and standing methodology
 ```
 

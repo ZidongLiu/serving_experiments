@@ -94,9 +94,11 @@ Everything lives in this folder so week N can be planned from evidence.
 
 ## Weekly plans
 
-Each week gets its own file — `week1.md`, `week2.md`, … — holding that week's post spec, runs,
-confounds, steps, and a results/notes section filled in as the week goes. Keep this file for
-standing context; keep the week-specific detail out of it.
+Each week gets its own folder — `week1/`, `week2/`, … — with a `weekN.md` holding that week's
+question, predictions, runs, confounds, and a results/notes section filled in as the week goes;
+`notes/` for standalone write-ups, `src/` for scripts, `upload_result/` for committed artifacts and
+`results/` for gitignored raw output. Keep this file for standing context; keep week-specific detail
+out of it.
 
 **Current: [`week1/week1.md`](week1/week1.md)** — Blackwell serving baseline + goodput. Question:
 how far apart are peak throughput and the rate actually servable at an interactive SLO? Runs are
@@ -118,11 +120,13 @@ resets the prefix/mm/encoder caches between runs, and emits `summary.csv`; `swee
 `sweep plot_pareto` chart it. Read the framework before writing around it — that habit *is* the
 lane-2 skill, and it has already caught three would-be time sinks.
 
-**Candidate: [`week2.md`](week2.md)** — not yet planned. Holds the CUDA-toolkit item: this box has
-no toolkit, so FlashInfer's sampler and DeepGEMM's FP8 GEMM are both bypassed, and every FP8 number
-measured so far ran on a Cutlass fallback. Open question: how much does that kernel choice actually
-cost on sm_120? A negligible delta is a publishable answer — it would correct the *inference* drawn
-on 2026-08-01, not the numbers.
+**Next: [`week2/week2.md`](week2/week2.md)** — turn week 1's napkin model into a scheduler-grounded
+formula, commit predictions for models never run on this card, push, *then* measure. The public git
+timestamp is the proof the predictions came first.
+
+**[`candidates.md`](candidates.md)** — parked ideas with design work already done (CUDA toolkit /
+FP8 kernel A/B, what prefix caching actually buys, the TTFT flag sweep, MTP speculative decoding,
+BurstGPT arrival realism). Promote one into a week when that week chooses it; don't rediscover them.
 
 ## Positioning
 

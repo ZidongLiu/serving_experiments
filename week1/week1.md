@@ -95,7 +95,7 @@ regime this week wants.
   still appear (it's driven by batching, not architecture), but the result would be incomparable to
   anything and half the thread would be architecture caveats. Wrong model for a *baseline*.
   - Keep for later: `mtp_num_hidden_layers = 1` means it ships an MTP draft head — a speculative
-    decoding target already sitting in the local cache. Noted in `week2.md` as a candidate.
+    decoding target already sitting in the local cache. Noted in `candidates.md`.
 
 ### Server, held identical across all runs
 
@@ -113,7 +113,7 @@ vllm serve Qwen/Qwen3-8B \
 
 | flag | why |
 |---|---|
-| `VLLM_USE_FLASHINFER_SAMPLER=0` | no CUDA toolkit on this box; FlashInfer JITs at first call and dies. See `week2.md` |
+| `VLLM_USE_FLASHINFER_SAMPLER=0` | no CUDA toolkit on this box; FlashInfer JITs at first call and dies. See `candidates.md` |
 | `--max-model-len 4096` | ample for 1024-in/256-out; makes the startup concurrency line report the number this workload actually runs at |
 | `--gpu-memory-utilization 0.90` | the default, stated explicitly because post 2 promises every flag |
 | `--no-enable-prefix-caching` | the confound. On by default in V1. This is post 5 |
@@ -402,7 +402,7 @@ The missing toolkit disables *two* paths, not one. The sampler is irrelevant to 
 DeepGEMM's FP8 GEMM falling back to `CutlassFp8BlockScaledMMKernel` means **every FP8 number I've
 measured on this card ran on a fallback kernel** — the FoT project has been quietly doing this since
 July. So my own published Blackwell numbers are probably understated. Captured in
-[`week2.md`](../week2.md) as "I understated my own hardware", with the A/B design and the
+[`candidates.md`](../candidates.md) as "I understated my own hardware", with the A/B design and the
 must-not-compare-against-stale-baselines confound.
 
 **Blocking tomorrow — both have wall-clock latency, start them first**
