@@ -36,8 +36,8 @@ SUMMARY = os.path.join(UPLOAD_DIR, "summary.json")
 OUT_PNG = os.path.join(UPLOAD_DIR, "week1_goodput.png")
 
 # (label, ttft_ms, tpot_ms)
-STRICT = ("strict SLO (TTFT 200ms / TPOT 50ms)", 200.0, 50.0)
-LOOSE = ("loose SLO (TTFT 1000ms / TPOT 100ms)", 1000.0, 100.0)
+STRICT = ("strict SLO — TTFT 200ms, TPOT 50ms", 200.0, 50.0)
+LOOSE = ("loose SLO — TTFT 1s, TPOT 100ms", 1000.0, 100.0)
 
 # Highest rate drawn. Everything above is the same saturated state, so plotting it
 # only steals x-axis room from the knee. Table still reports every run.
@@ -136,9 +136,9 @@ def main() -> None:
     ax_t.plot(rates, thru, "o-", lw=2, ms=6, color="#2a78d6",
               label="total output throughput")
     ax_t.plot(rates, [g * OSL for g in gp_loose], "s-", lw=2, ms=6, color="#1baf7a",
-              label=f"useful throughput — {LOOSE[0]}")
+              label=f"met {LOOSE[0]}")
     ax_t.plot(rates, [g * OSL for g in gp_strict], "^-", lw=2, ms=6, color="#eb6834",
-              label=f"useful throughput — {STRICT[0]}")
+              label=f"met {STRICT[0]}")
 
     if sat_thru:
         ax_t.axhline(sat_thru, color="#8a8a85", ls=":", lw=1.5)
@@ -158,10 +158,8 @@ def main() -> None:
 
     ax_t.set_ylabel("tokens / s")
     ax_t.set_title(
-        "Qwen3-8B on 1× RTX PRO 6000 Blackwell — throughput plateaus, useful work collapses\n"
-        "vLLM 0.26.0, 1024-in/256-out, prefix caching off, untuned defaults "
-        "(max_num_seqs=128, max_num_batched_tokens=2048)",
-        fontsize=10.5, loc="left", pad=12,
+        "Qwen3-8B on 1× RTX PRO 6000 Blackwell — throughput plateaus, useful work collapses",
+        fontsize=11.5, loc="left", pad=10,
     )
     ax_t.legend(frameon=False, fontsize=9, loc="lower left")
     ax_t.grid(alpha=0.25, lw=0.6)
@@ -174,9 +172,9 @@ def main() -> None:
               label="P99 TTFT")
     for thresh, name in ((STRICT[1], "strict TTFT SLO"), (LOOSE[1], "loose TTFT SLO")):
         ax_l.axhline(thresh, color="#8a8a85", ls=":", lw=1.5)
-        ax_l.annotate(f"{name} ({thresh:.0f} ms)", xy=(X_MAX + 0.5, thresh),
-                      xytext=(-2, 5), textcoords="offset points",
-                      ha="right", fontsize=8.5, color="#52514e")
+        ax_l.annotate(f"{name} ({thresh:.0f} ms)", xy=(0.5, thresh),
+                      xytext=(2, 5), textcoords="offset points",
+                      ha="left", fontsize=8.5, color="#52514e")
 
     ax_l.set_yscale("log")
     ax_l.set_ylabel("TTFT (ms, log scale)")
@@ -186,11 +184,19 @@ def main() -> None:
     ax_l.set_xticks(rates)
     ax_l.set_xticklabels([f"{r:g}" for r in rates])
 
-    fig.text(0.005, 0.005,
-             f"Single runs, no repeats. Rates above {X_MAX:g} omitted from the chart — identical "
-             "saturated behaviour. Above the ~9 req/s capacity wall there is no steady state: "
-             "mean TTFT grows with run length, so those values describe (server, num_prompts).",
-             fontsize=8, color="#52514e")
+    # Setup + caveats sit in panel A's empty right-hand block (between the descending
+    # goodput curves and the peak annotation) rather than in a full-width footer, which
+    # is illegible at the size an image is first viewed on a timeline.
+    ax_t.text(
+        0.985, 0.33,
+        "vLLM 0.26.0 · bf16\n"
+        "1024-in / 256-out, ignore_eos\n"
+        "prefix caching off\n"
+        "max_num_seqs 128 · mnbt 2048 (stock)\n"
+        "single runs, no repeats",
+        transform=ax_t.transAxes, ha="right", va="bottom",
+        fontsize=8.5, color="#52514e", linespacing=1.6,
+    )
 
     fig.savefig(OUT_PNG, dpi=200, bbox_inches="tight", facecolor="white")
     print(f"\nwrote {OUT_PNG}")
