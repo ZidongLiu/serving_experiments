@@ -1,14 +1,53 @@
 # Week 2 — CANDIDATE, not yet planned
 
-> Captured mid-week-1 (2026-08-01) while debugging env setup. Per the cadence rule in `CLAUDE.md`,
-> week 2 gets planned at the *start* of week 2, from what week 1 actually produced. This file is a
-> holding pen for the idea and its design, not a commitment.
+> Captured mid-week-1 (2026-08-01) while debugging env setup; revised 2026-08-05. Per the cadence
+> rule in `CLAUDE.md`, week 2 gets planned at the *start* of week 2, from what week 1 actually
+> produced. This file is a holding pen for the idea and its design, not a commitment.
 
 ---
 
 ## Carried in from week 1
 
-- **Sweep harness.** Week 1 explicitly deferred it and ran seven benchmarks by hand.
+- ~~**Sweep harness.** Week 1 explicitly deferred it and ran seven benchmarks by hand.~~
+  **Dead — vLLM already ships one.** See below. Week 1 still ran by hand on purpose (learning the
+  flags was the point); there is nothing left to *build*.
+- **Two example traps for the "confound confession" voice**, now established in week 1's post 5:
+  prefix caching on by default, and `--reasoning-parser` making the bench client blind to streamed
+  tokens. This post continues that thread rather than repeating the trick.
+
+### The harness does not need building (verified 2026-08-05, vLLM 0.26.0)
+
+`vllm bench sweep` — subcommands `{serve, serve_workload, startup, plot, plot_pareto}`:
+
+- **`sweep serve`** takes `--serve-cmd` and `--bench-cmd` plus `--serve-params` / `--bench-params`
+  JSON files and iterates their Cartesian product. Structure
+  (`benchmarks/sweep/serve.py:267`) is one server per serve-config, all bench-configs run against
+  that same server — exactly the "don't restart between rates" discipline week 1 arrived at by hand:
+
+  ```python
+  for serve_comb in serve_params:
+      with server_ctx(...) as server:
+          for bench_comb in bench_params:
+              run_comb(..., num_runs=num_runs)
+  ```
+
+- `--num-runs` defaults to **3**, so run-to-run variance comes free — a rigor upgrade over week 1's
+  single-shot runs, and worth having for an A/B where the effect may be small.
+- `--resume` runs only combinations with no output file yet. Satisfies `CLAUDE.md`'s
+  unattended-and-resumable requirement without writing it.
+- `--dry-run` prints the commands without executing. Use this first, always.
+- Between runs it POSTs `/reset_prefix_cache`, `/reset_mm_cache`, `/reset_encoder_cache`
+  (`benchmarks/sweep/server.py:15`), overridable via `--after-bench-cmd`.
+- `--link-vars` couples serve and bench parameters (e.g. `max_num_seqs=max_concurrency`) so invalid
+  combinations are skipped rather than run.
+- Writes `summary.csv` across the whole sweep.
+- **`sweep plot`** draws curves with `--curve-by` / `--fig-by` / `--col-by` / `--filter-by` /
+  `--bin-by`. **`sweep plot_pareto`** plots tokens/s/user against tokens/s/GPU — the
+  latency-vs-throughput frontier.
+
+Implication for this week: the effort budget that was earmarked for harness-building goes into the
+experiment instead. **Learning `sweep`'s parameter-JSON semantics is now a real task, but it replaces
+a larger one.** Budget one sitting for `--dry-run` iteration before trusting a long unattended run.
 
 ## New candidate: the CUDA toolkit item
 
@@ -64,15 +103,49 @@ Needs sudo and a few GB. Also a prerequisite for ever building vLLM from source.
 *Not* a hack to work around — the pip `nvidia/cu13` tree + `CUDA_HOME` pointed into a venv was
 considered and rejected as fragile.
 
-### The post idea
+**This is the week's one external-latency item — do it first**, before designing anything. If the
+toolkit install fails or `has_deep_gemm()` still returns `False`, there is no post and the week
+should pivot immediately rather than at day three.
 
-**"I understated my own hardware."** Self-correction as the hook: I benchmarked this card in a
-hurry, bypassed two kernel paths because the toolkit wasn't installed, and published numbers that
-were too low. Here's what the card actually does, and here's how much the shortcut cost.
+### The question
 
-Stronger than a plain benchmark post for the same reason week 1's post 5 is: the admission travels
-further than the curve. It also pairs naturally with the week-1 confound-confession framing, so the
-two posts build a consistent voice rather than repeating a trick.
+To be written down before the A/B runs and left unedited. The finding is whichever way it comes out.
+
+**Question.** Every FP8 number measured on this box so far ran on `CutlassFp8BlockScaledMMKernel`,
+because a missing CUDA toolkit silently disabled DeepGEMM's JIT path. Install the toolkit and the
+DeepGEMM path becomes available. **How much does the kernel choice actually change serving
+performance on sm_120?**
+
+**Why it's worth asking.** The interesting part isn't the delta, it's that the fallback was
+*silent* — a presence probe failed at import and vLLM carried on. So the question underneath is:
+how much can a benchmark be wrong by, with nothing in the logs to tell you?
+
+**Predictions, to be checked against the result.**
+
+1. The sampler arm (`VLLM_USE_FLASHINFER_SAMPLER`) moves throughput by ≈0. Sampling is not on the
+   critical path at these batch sizes.
+2. The DeepGEMM arm shows a delta that **grows with batch size** — decode at low concurrency is
+   memory-bandwidth-bound, so GEMM choice is largely hidden; prefill and high-concurrency decode are
+   compute-bound, where it should show.
+3. Direction unknown in magnitude. Cutlass FP8 on Blackwell may simply be well-tuned, in which case
+   the delta is small at every batch size.
+
+**What each outcome means.**
+
+| Result | The post |
+|---|---|
+| Delta grows with batch size, materially | The number, plus the mechanism: a silent fallback cost me X% and nothing warned me |
+| Delta flat and small at all batch sizes | "Cutlass FP8 on Blackwell is already good" — a null result worth publishing, because the *reason* I went looking is the transferable part |
+| `has_deep_gemm()` still `False` after install | No post. `LOG.md`, and pivot the week |
+
+Prediction 3 is the honest one: **there is no assumption here that the card was being
+under-served.** If the delta is negligible, the correction is to the *inference* I drew on
+2026-08-01 ("my numbers are probably understated"), not to the numbers themselves — and saying so
+is the post.
+
+Whichever way it lands, the framing continues week 1's voice: the mechanism of being wrong is more
+transferable than the measurement. It should not be a second self-flagellation post for its own
+sake — if the honest answer is "I was wrong to worry," say that plainly and move on.
 
 ### Design
 
@@ -99,9 +172,16 @@ high-concurrency decode are compute-bound, where it should show. If that shape a
 is delta-vs-concurrency and the post writes itself. **If the delta is flat and small, there is no
 post** — say so in `LOG.md` and drop it. Cutlass FP8 on Blackwell may simply be good.
 
-**This is where the deferred harness earns itself.** The experiment is arms × concurrency levels —
-a sweep, run unattended. Building the harness *for* this is better than building it in the
-abstract, and it collapses the two week-2 candidates into one.
+**Run it with `vllm bench sweep serve`.** The experiment is arms × concurrency levels, which is a
+Cartesian product over server env-vars × bench params — precisely what the tool takes. Env vars
+aren't `vllm serve` flags, so the arms go in via `--serve-cmd` wrappers (one per arm) or an
+`--after-bench-cmd`/env-injection approach; **resolve this with `--dry-run` before committing to an
+unattended run.** `--num-runs 3` matters here: if the DeepGEMM delta is small, single-shot runs can't
+distinguish it from noise, and "small but real" vs "noise" is the entire finding.
+
+**Carry week 1's settled configuration forward** so the two weeks are comparable where they overlap:
+`--no-enable-prefix-caching`, `--ignore-eos`, pinned `max_num_seqs` / `max_num_batched_tokens`,
+`--save-result --save-detailed --metadata`, and no `--reasoning-parser`.
 
 ### Confounds specific to this one
 
@@ -120,14 +200,42 @@ abstract, and it collapses the two week-2 candidates into one.
   Must print `True` after the toolkit install. Also grep each run's startup log for
   `CutlassFp8BlockScaledMMKernel` and record which kernel that arm actually ran. Non-negotiable.
 - **JIT compile time is not inference time.** First run after enabling pays a multi-minute compile
-  (cached in `~/.cache/flashinfer`). Warm up, discard, then measure.
+  (cached in `~/.cache/flashinfer`). Warm up, discard, then measure. Note `sweep serve` restarts the
+  server per serve-config — make sure the compile happens inside a warmup combo, not inside a
+  measured one.
 - Plus the standing list in `CLAUDE.md` — APC off, `ignore_eos`, clock drift across a longer sweep.
+  A sweep with `--num-runs 3` is *much* longer than week 1's seven runs, so clock drift goes from a
+  minor check to a real risk. Record clocks per run and check whether arm order correlates with
+  temperature; if it does, interleave arms rather than running them in blocks.
 
 ### Open questions
 
 - Is `VLLM_HAS_FLASHINFER_CUBIN` a prebuilt-kernel path that sidesteps `nvcc` entirely? If so, the
   "you need a toolkit" framing may be too strong and the post needs rewording.
 - Does the FP8 delta show up at all on sm_120, or only on datacenter Blackwell?
+
+---
+
+## Other candidates (parked, not competing for week 2)
+
+Recorded so they aren't rediscovered. None of these is planned.
+
+- **What does prefix caching actually buy?** Week 1 disabled APC as a confound; the inverse is the
+  experiment. `--dataset-name prefix_repetition` is purpose-built
+  (`--prefix-repetition-num-prefixes`, `--prefix-repetition-prefix-len`,
+  `--prefix-repetition-suffix-len`), and `/reset_prefix_cache` gives a clean per-run reset. Natural
+  sequel to week 1 and cheap.
+- **The one flag that moves TTFT most.** Week 1 deliberately shipped untuned defaults
+  (`max_num_batched_tokens=2048`, `max_num_seqs=128`). Sweeping them against the week-1 baseline is a
+  direct follow-up with a built-in hook: "I left the defaults on purpose. Here's what they cost."
+- **Speculative decoding with a local target.** `Qwen/Qwen3.5-9B` (already cached) has
+  `mtp_num_hidden_layers = 1` — a built-in multi-token-prediction draft head. That satisfies
+  `CLAUDE.md`'s hard constraint (target must have published draft/EAGLE weights) with a model already
+  on disk. Note it's also a hybrid linear-attention VLM, so acceptance-rate results won't transfer to
+  dense models — scope any claim accordingly.
+- **Arrival realism.** Week 1's sweep is synthetic Poisson (`--burstiness 1.0`). `--dataset-name
+  burstgpt` replays real production traces, and `sweep serve_workload` exists for workload-shaped
+  sweeps. Answers "but real traffic isn't Poisson."
 
 ---
 

@@ -8,3 +8,16 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Post drafts and scratch — working files, not part of the public record
+**/thread.md
+resume
+questions
+
+# Raw benchmark output — machine dumps, large and regenerable. 49 MB for week 1
+# alone, 80% of it the per-token `itls` arrays. Regenerate with week*/src/benchmark.sh.
+#
+# Publishable artifacts live in week*/upload_result/ and ARE committed: the slimmed
+# summary (per-request TTFT/TPOT, so anyone can recompute goodput at their own SLO),
+# the chart, and the clock log. week*/src/slim.py promotes raw -> upload_result.
+week*/results/

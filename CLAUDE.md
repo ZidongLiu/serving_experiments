@@ -98,13 +98,31 @@ Each week gets its own file — `week1.md`, `week2.md`, … — holding that wee
 confounds, steps, and a results/notes section filled in as the week goes. Keep this file for
 standing context; keep the week-specific detail out of it.
 
-**Current: [`week1.md`](week1.md)** — Blackwell serving baseline + goodput. Post claim: peak
-throughput and the rate actually servable at an interactive SLO are very different numbers, and the
-gap is the finding. Sweep harness explicitly deferred to week 2.
+**Current: [`week1/week1.md`](week1/week1.md)** — Blackwell serving baseline + goodput. Question:
+how far apart are peak throughput and the rate actually servable at an interactive SLO? Runs are
+executed by hand — deliberately, since learning the flags is the point.
+
+**Each week's file states a question and predictions, written before measuring and left unedited
+afterwards.** Not a claim and a headline. The repo is public and the thread links it, so a
+conclusion dated before the data reads as deciding the answer in advance — which is the opposite of
+the positioning. A falsifiable prediction that turns out wrong is an asset; a pre-written claim that
+turns out right is worth nothing, because nobody can tell it apart from a post-hoc one. Every week
+also names the outcome that means **no post** (`CLAUDE.md`'s honesty valve), so "there was no
+finding" stays a permitted result rather than a failure to explain away.
+
+**Don't build a benchmark harness.** vLLM ships one: `vllm bench {serve,latency,throughput,sweep,…}`
+covers dataset acquisition, Poisson arrivals at a target rate, per-token timing, SLO/goodput
+accounting, and result persistence. `vllm bench sweep serve` runs a Cartesian product of server ×
+benchmark configs, repeats each (`--num-runs`, default 3), supports `--resume` and `--dry-run`,
+resets the prefix/mm/encoder caches between runs, and emits `summary.csv`; `sweep plot` and
+`sweep plot_pareto` chart it. Read the framework before writing around it — that habit *is* the
+lane-2 skill, and it has already caught three would-be time sinks.
 
 **Candidate: [`week2.md`](week2.md)** — not yet planned. Holds the CUDA-toolkit item: this box has
 no toolkit, so FlashInfer's sampler and DeepGEMM's FP8 GEMM are both bypassed, and every FP8 number
-measured so far ran on a Cutlass fallback. Candidate post: "I understated my own hardware."
+measured so far ran on a Cutlass fallback. Open question: how much does that kernel choice actually
+cost on sm_120? A negligible delta is a publishable answer — it would correct the *inference* drawn
+on 2026-08-01, not the numbers.
 
 ## Positioning
 
